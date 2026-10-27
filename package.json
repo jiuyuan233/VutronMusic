@@ -35,6 +35,13 @@
     "format": "prettier .",
     "format:fix": "prettier . --write",
     "test": "npm run build:pre && playwright test",
+    "mobile:dev": "vite --config vite.config.mobile.ts",
+    "mobile:build": "vite build --config vite.config.mobile.ts",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npm run mobile:build && npx cap sync android",
+    "cap:open:android": "npx cap open android",
+    "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run cap:sync && cd android && ./gradlew assembleRelease",
     "test:linux": "npm run build:pre && xvfb-run --auto-servernum --server-args='-screen 0, 1280x960x24' -- playwright test"
   },
   "engines": {
@@ -99,7 +106,14 @@
     "vue-pick-colors": "^1.8.0",
     "vue-router": "^4.3.0",
     "vue3-lottie": "^3.3.1",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/preferences": "^6.0.3",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1",
+    "@capacitor/keyboard": "^6.0.3",
+    "@capacitor/haptics": "^6.0.2",
+    "@capacitor/android": "^6.1.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0",
@@ -132,7 +146,8 @@
     "vite-plugin-electron-renderer": "^0.14.5",
     "vite-plugin-eslint": "^1.8.1",
     "vue-eslint-parser": "^9.4.2",
-    "vue-tsc": "^2.0.22"
+    "vue-tsc": "^2.0.22",
+    "@capacitor/cli": "^6.1.2"
   },
   "overrides": {
     "vite-plugin-electron": {

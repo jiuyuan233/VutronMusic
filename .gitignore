@@ -60,6 +60,7 @@ $RECYCLE.BIN/
 # Project Files
 dist/
 dist-native/
+dist-mobile/
 release/
 tests/results/
 npm-debug.log
@@ -67,6 +68,17 @@ npm-debug.log.*
 vite-plugin-electron.log
 tmp/
 build/
+
+# Capacitor / Android
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/captures/
+*.keystore
+*.jks
+*.keystore.properties
 
 # Flatpak builder cache
 .flatpak-builder

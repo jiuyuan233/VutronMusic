@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VutronMusic</string>
+    <string name="title_activity_main">VutronMusic</string>
+    <string name="package_name">com.vutronmusic.android</string>
+    <string name="custom_url_scheme">com.vutronmusic.android</string>
+</resources>
