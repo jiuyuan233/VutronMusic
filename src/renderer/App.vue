@@ -1,12 +1,13 @@
 <template>
-  <div id="app" :class="{ 'user-select-none': userSelectNone }">
+  <div id="app" :class="{ 'user-select-none': userSelectNone, 'mobile-layout': isMobile }">
     <ScrollBar v-show="!showLyrics" />
-    <SideNav />
+    <SideNav v-if="!isMobile" />
     <NavBar ref="navBarRef" />
     <div id="main" ref="mainRef" :style="mainStyle" @scroll="scrollEvent">
       <router-view> </router-view>
     </div>
     <PlayerBar v-if="enabled" v-show="showPlayerBar" />
+    <BottomNav v-if="isMobile" />
     <ShowToast />
     <ConfirmModal />
     <AddTrackToPlaylistModal />
@@ -24,6 +25,7 @@ import ScrollBar from './components/ScrollBar.vue'
 import PlayerBar from './components/PlayerBar.vue'
 import NavBar from './components/NavBar.vue'
 import SideNav from './components/SideNav.vue'
+import BottomNav from './components/BottomNav.vue'
 import ShowToast from './components/ShowToast.vue'
 import ConfirmModal from './components/ModalConfirm.vue'
 import AddTrackToPlaylistModal from './components/ModalAddTrackToPlaylist.vue'
@@ -140,7 +142,8 @@ const handleEventBus = () => {
   })
 }
 
-const padding = ref(96)
+const isMobile = computed(() => !!window.env?.isCapacitor)
+const padding = ref(isMobile.value ? 128 : 96) // 移动端: 64 PlayerBar + 64 BottomNav
 const userSelectNone = ref(false)
 const settingsStore = useSettingsStore()
 const { theme, general } = storeToRefs(settingsStore)
@@ -335,6 +338,11 @@ onBeforeUnmount(() => {
   scrollbar-width: none;
   color: var(--color-text);
   height: 100vh;
+}
+
+/* 移动端布局：无左侧导航栏，底部导航栏 */
+.mobile-layout #main {
+  padding: 0px 0px 0px 0px;
 }
 
 #main::-webkit-scrollbar {

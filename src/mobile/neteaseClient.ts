@@ -77,18 +77,119 @@ async function eapiRequest(path: string, data: Record<string, any> = {}): Promis
 }
 
 export async function qrcodeUnikey(): Promise<{ unikey: string }> {
-  const res = await eapiRequest('music/login/qrcode/unikey', { type: 1 })
-  return { unikey: res.unikey || res.uuid }
+  const res = await eapiRequest('login/qr/key', { timestamp: Date.now() })
+  return { unikey: res.unikey || res.data?.unikey || res.uuid }
 }
 
 export async function qrcodeLogin(unikey: string): Promise<{ code: number; cookie?: string }> {
-  const res = await eapiRequest('music/login/qrcode/client/login', { key: unikey, type: 1 })
+  const res = await eapiRequest('login/qr/check', { key: unikey, timestamp: Date.now() })
   return { code: res.code, cookie: res.cookie }
 }
 
 export async function loginStatus(): Promise<{ profile: any; account: any }> {
-  const res = await eapiRequest('music/login/status', { cookie })
+  const res = await eapiRequest('login/status', { timestamp: Date.now() })
   return { profile: res.data?.profile, account: res.data?.account }
+}
+
+// ── 插件方法（返回值格式与 netease.js 插件一致）──
+
+/** 获取二维码 key 和 URL，对应插件 loginQrKey */
+export async function loginQrKey(): Promise<{ code: number; data: { url: string; qrcode: string } }> {
+  try {
+    const result = await eapiRequest('login/qr/key', { timestamp: Date.now() })
+    const unikey = result.unikey || result.data?.unikey || result.uuid
+    const result2 = await eapiRequest('login/qr/create', { key: unikey, qrimg: true, timestamp: Date.now() })
+    return {
+      code: result?.code ?? 200,
+      data: { url: result2.qrurl || result2.data?.qrurl || '', qrcode: unikey }
+    }
+  } catch {
+    return { code: 404, data: { url: '', qrcode: '' } }
+  }
+}
+
+/** 检查二维码扫码状态，对应插件 loginQrCodeCheck */
+export async function loginQrCodeCheck(key: string): Promise<{ code: number; message?: string; user?: any }> {
+  try {
+    const result = await eapiRequest('login/qr/check', { key, timestamp: Date.now() })
+    if (result.code === 803) {
+      // 登录成功，cookie 已通过 updateCookie 自动保存
+      // 获取用户信息
+      try {
+        const res = await eapiRequest('login/status', { timestamp: Date.now() })
+        const profile = res.data?.profile
+        if (profile) {
+          await pref.set('neteaseUserId', profile.userId)
+          result.user = {
+            userId: profile.userId,
+            avatarUrl: profile.avatarUrl || '',
+            nickname: profile.nickname || '',
+            isVip: [11, 110].includes(profile.vipType),
+            signature: profile.signature || ''
+          }
+        }
+      } catch {
+        // 获取用户信息失败，不影响登录状态
+      }
+    }
+    return result
+  } catch {
+    return { code: 800, message: '' }
+  }
+}
+
+/** 获取账号信息，对应插件 getAccount */
+export async function getAccount(): Promise<{ code: number; baseUrl: string; userName: string; pwd: string }> {
+  return { code: 200, baseUrl: BASE_URL, userName: '', pwd: '' }
+}
+
+/** Cookie 登录，对应插件 doLogin */
+export async function doLogin(params: { cookie?: string; userName?: string; pwd?: string }): Promise<{ code: number; data?: any; message?: string }> {
+  if (params?.cookie) {
+    cookie = params.cookie
+    await pref.set('neteaseCookie', cookie)
+    try {
+      const res = await eapiRequest('login/status', { timestamp: Date.now() })
+      if (res.data?.profile) {
+        const profile = res.data.profile
+        await pref.set('neteaseUserId', profile.userId)
+        return {
+          code: 200,
+          data: {
+            userId: profile.userId,
+            avatarUrl: profile.avatarUrl,
+            nickname: profile.nickname,
+            isVip: [11, 110].includes(profile.vipType),
+            signature: profile.signature
+          }
+        }
+      }
+    } catch {
+      // 网络失败
+    }
+    cookie = ''
+    await pref.remove('neteaseCookie')
+    return { code: 404, message: 'Cookie 无效或已过期' }
+  }
+  return { code: 404, message: '本插件不支持该登录方式' }
+}
+
+/** 登出，对应插件 doLogout */
+export async function doLogout(): Promise<{ code: number }> {
+  try {
+    cookie = ''
+    await pref.remove('neteaseCookie')
+    await pref.remove('neteaseUserId')
+    return { code: 200 }
+  } catch {
+    return { code: 404 }
+  }
+}
+
+/** 更新服务地址，对应插件 updateBaseUrl */
+export async function updateBaseUrl(params: { url: string }): Promise<{ code: number }> {
+  // 移动端固定使用官方地址，但返回成功以兼容流程
+  return { code: 200 }
 }
 
 export async function userPlaylist(uid: number, limit = 30, offset = 0): Promise<any[]> {
@@ -162,6 +263,12 @@ export default {
   qrcodeUnikey,
   qrcodeLogin,
   loginStatus,
+  loginQrKey,
+  loginQrCodeCheck,
+  getAccount,
+  doLogin,
+  doLogout,
+  updateBaseUrl,
   userPlaylist,
   recommendSongs,
   playlistDetail,

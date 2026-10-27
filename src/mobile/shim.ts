@@ -41,46 +41,104 @@ const handlers: Record<string, (data: any) => Promise<any> | any> = {
   },
 
   // ── 网易云插件调用（核心）──
-  'get-song-url': async (data: { trackId: number | string; level?: string }) => {
-    const urls = await netease.songUrlV1([Number(data.trackId)], data.level || 'exhigh')
-    return urls[0]
+  'get-song-url': async (data: { pluginId: string; sourceContext: any; track: any }) => {
+    const trackId = Number(data.sourceContext?.id || data.sourceContext?.trackId || data.track?.id || 0)
+    if (!trackId) return { url: [], replayGain: 0, peak: 1 }
+    const level = data.track?.quality || 'exhigh'
+    const urls = await netease.songUrlV1([trackId], level)
+    const urlObj = urls[0]
+    return {
+      url: urlObj?.url ? [urlObj] : [],
+      replayGain: 0,
+      peak: 1
+    }
   },
 
-  'plugin-lyric': async (data: { trackId: number | string }) => {
-    return await netease.lyric(Number(data.trackId))
+  'plugin-lyric': async (data: { pluginId: string; sourceContext: { rawCtx: any } }) => {
+    const rawCtx = data.sourceContext?.rawCtx || {}
+    const trackId = Number(rawCtx.id || rawCtx.trackId || 0)
+    if (!trackId) return { code: 404, data: [] }
+    const lyricData = await netease.lyric(trackId)
+    return { code: 200, data: lyricData }
   },
 
-  'plugin-method-call': async (data: { pluginId: string; method: string; args: any[] }) => {
+  'plugin-method-call': async (data: { pluginId: string; methodName: string; params: any }) => {
     if (data.pluginId !== 'netease') {
       console.warn(`[shim] plugin ${data.pluginId} not supported in MVP`)
       return undefined
     }
-    const { method, args = [] } = data
-    const fnMap: Record<string, (...a: any[]) => Promise<any>> = {
-      'user/playlist': (uid, limit, offset) => netease.userPlaylist(uid, limit, offset),
-      'recommend/songs': () => netease.recommendSongs(),
-      'playlist/detail': (id, n) => netease.playlistDetail(id, n),
-      'song/detail': (ids) => netease.songDetail(ids),
-      'song/url/v1': (ids, level) => netease.songUrlV1(ids, level),
-      lyric: (id) => netease.lyric(id),
-      search: (kw, type, limit, offset) => netease.search(kw, type, limit, offset),
-      like: (id, l) => netease.like(id, l),
-      'like/list': (uid) => netease.likeList(uid),
-      'login/status': () => netease.loginStatus(),
-      'login/qrcode/unikey': () => netease.qrcodeUnikey(),
-      'login/qrcode/client/login': (key) => netease.qrcodeLogin(key)
+    const { methodName, params = {} } = data
+    // 方法名与 netease.js 插件 exports.* 一致
+    const fnMap: Record<string, (p: any) => Promise<any>> = {
+      // ── 登录 ──
+      loginQrKey: () => netease.loginQrKey(),
+      loginQrCodeCheck: (p) => netease.loginQrCodeCheck(p.key),
+      getAccount: () => netease.getAccount(),
+      doLogin: (p) => netease.doLogin(p),
+      doLogout: () => netease.doLogout(),
+      updateBaseUrl: (p) => netease.updateBaseUrl(p),
+
+      // ── 歌单/歌曲 ──
+      userPlaylist: (p) => netease.userPlaylist(p.uid, p.limit, p.offset),
+      getRecommendTracks: () => netease.recommendSongs(),
+      getPlaylistDetail: (p) => netease.playlistDetail(p.id, p.n),
+      getPlaylistTracks: (p) => netease.playlistDetail(p.id, p.n),
+      getTrackDetail: (p) => netease.songDetail(p.tracks?.map((t: any) => t.id) || []),
+      getLyric: (p) => netease.lyric(Number(p.id || p)),
+      search: (p) => netease.search(p.keywords || p.keyword, p.type, p.limit, p.offset),
+      likeATrack: (p) => netease.like(Number(p.trackId), p.like),
+
+      // ── 登录状态 ──
+      systemPing: () => ({ code: 200, message: 'ok' }),
+
+      // ── 以下方法返回空数据 stub（防止 UI 崩溃，后续逐步实现）──
+      getBanner: () => ({ code: 200, data: [] }),
+      getRecommendPlaylist: () => ({ code: 200, data: [] }),
+      topArtists: () => ({ code: 200, data: [] }),
+      topAlbums: () => ({ code: 200, data: [] }),
+      rankTop: () => ({ code: 200, data: [] }),
+      rankList: () => ({ code: 200, data: [] }),
+      topSong: () => ({ code: 200, data: [] }),
+      newAlbums: () => ({ code: 200, data: [] }),
+      getCategoryPlaylist: () => ({ code: 200, data: [] }),
+      artistsList: () => ({ code: 200, data: [] }),
+      catlist: () => ({ code: 200, data: [] }),
+      getArtistCatlist: () => ({ code: 200, data: [] }),
+      getAlbumCatlist: () => ({ code: 200, data: [] }),
+      getTrackCatlist: () => ({ code: 200, data: [] }),
+      resizePicUrl: (p) => ({ code: 200, data: { url: p?.url || '' } }),
+      subscribePlaylist: () => ({ code: 200 }),
+      addOrRemoveTracksToPlaylist: () => ({ code: 200 }),
+      reorderPlaylistTracks: () => ({ code: 200 }),
+      createPlaylist: () => ({ code: 200, data: {} }),
+      editPlaylist: () => ({ code: 200 }),
+      getAllTracks: () => ({ code: 200, data: [] }),
+      personalFM: () => ({ code: 200, data: {} }),
+      fmTrash: () => ({ code: 200 }),
+      artistDetail: () => ({ code: 200, data: {} }),
+      artistAlbums: () => ({ code: 200, data: [] }),
+      artistMVs: () => ({ code: 200, data: [] }),
+      simiArtists: () => ({ code: 200, data: [] }),
+      followArtist: () => ({ code: 200 }),
+      albumDetail: () => ({ code: 200, data: {} }),
+      subscribeAlbum: () => ({ code: 200 }),
+      mvDetail: () => ({ code: 200, data: {} }),
+      likeAMV: () => ({ code: 200 }),
+      subAMV: () => ({ code: 200 }),
+      userRecord: () => ({ code: 200, data: [] })
     }
-    const fn = fnMap[method]
+    const fn = fnMap[methodName]
     if (!fn) {
-      console.warn(`[shim] netease method ${method} not implemented`)
+      console.warn(`[shim] netease method '${methodName}' not implemented`)
       return undefined
     }
-    return await fn(...args)
+    return await fn(params)
   },
 
   // ── 插件列表 ──
+  // 返回格式与桌面版一致：[code, { name, icon, type, builtIn }] 元组数组
   'get-plugins': () => [
-    { id: 'netease', name: '网易云音乐', version: '1.0.0', type: 'library', active: true, enabled: true }
+    ['netease', { name: '网易云音乐', icon: 'netease', type: 'library', builtIn: true }]
   ],
   'get-source-priority': () => ['netease'],
   'set-source-priority': (data: string[]) => pref.set('sourcePriority', data),
