@@ -63,7 +63,15 @@ const routes = [
   {
     path: '/login/:service/:type',
     name: 'login',
-    component: () => import('../views/LoginAccount.vue')
+    component: () =>
+      window.env?.isCapacitor
+        ? import('../views/MobileLogin.vue')
+        : import('../views/LoginAccount.vue')
+  },
+  {
+    path: '/m-login',
+    name: 'mobileLogin',
+    component: () => import('../views/MobileLogin.vue')
   },
   {
     path: '/album/:pluginId/:sourceContext',

@@ -1,8 +1,9 @@
 <template>
   <div id="app" :class="{ 'user-select-none': userSelectNone, 'mobile-layout': isMobile }">
-    <ScrollBar v-show="!showLyrics" />
+    <ScrollBar v-show="!showLyrics && !isMobile" />
     <SideNav v-if="!isMobile" />
-    <NavBar ref="navBarRef" />
+    <NavBar v-if="!isMobile" ref="navBarRef" />
+    <MobileNavBar v-if="isMobile" />
     <div id="main" ref="mainRef" :style="mainStyle" @scroll="scrollEvent">
       <router-view> </router-view>
     </div>
@@ -24,6 +25,7 @@ import { onMounted, ref, provide, watch, computed, onBeforeUnmount } from 'vue'
 import ScrollBar from './components/ScrollBar.vue'
 import PlayerBar from './components/PlayerBar.vue'
 import NavBar from './components/NavBar.vue'
+import MobileNavBar from './components/MobileNavBar.vue'
 import SideNav from './components/SideNav.vue'
 import BottomNav from './components/BottomNav.vue'
 import ShowToast from './components/ShowToast.vue'
@@ -143,7 +145,7 @@ const handleEventBus = () => {
 }
 
 const isMobile = computed(() => !!window.env?.isCapacitor)
-const padding = ref(isMobile.value ? 128 : 96) // 移动端: 64 PlayerBar + 64 BottomNav
+const padding = ref(isMobile.value ? 128 : 96) // 移动端: 56 MobileNavBar + PlayerBar + 64 BottomNav
 const userSelectNone = ref(false)
 const settingsStore = useSettingsStore()
 const { theme, general } = storeToRefs(settingsStore)
@@ -200,7 +202,7 @@ const instanceId = ref('appInstance')
 const hasCustomTitleBar = ref(false)
 
 const mainStyle = computed(() => ({
-  paddingTop: (hasCustomTitleBar.value ? 84 : 64) + 'px',
+  paddingTop: isMobile.value ? 56 : (hasCustomTitleBar.value ? 84 : 64) + 'px',
   paddingBottom: padding.value + 'px'
 }))
 

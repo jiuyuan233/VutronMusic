@@ -74,15 +74,16 @@ const isCurrentRoute = (path: string): boolean => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: 60px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   background-color: var(--color-secondary-bg);
-  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
   z-index: 100;
   user-select: none;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
 
   .nav-item {
     flex: 1;
@@ -90,30 +91,30 @@ const isCurrentRoute = (path: string): boolean => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     height: 100%;
     border: none;
     background: transparent;
     color: var(--color-text);
-    opacity: 0.6;
-    transition: all 0.2s ease;
+    opacity: 0.55;
+    transition: opacity 0.2s ease, transform 0.15s ease;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
 
     .icon {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
     }
 
     .label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 500;
       white-space: nowrap;
     }
 
     &:active {
-      opacity: 1;
-      transform: scale(0.92);
+      opacity: 0.8;
+      transform: scale(0.9);
     }
 
     &.active {
