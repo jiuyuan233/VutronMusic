@@ -39,12 +39,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 34
-          build-tools-version: '34.0.0'
-          accept-android-sdk-licenses: true
+      # ubuntu-latest 已预装 Android SDK 34 + build-tools 34.0.0 + cmdline-tools
+      # 无需 android-actions/setup-android（v3 与 cmdline-tools 16.0 不兼容）
+      - name: Accept Android SDK licenses & verify
+        run: |
+          # 找到 sdkmanager（可能是 latest 或版本号目录）
+          SDKMGR=$(find $ANDROID_HOME/cmdline-tools -name sdkmanager -type f 2>/dev/null | head -1)
+          echo "sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "API levels:" && ls $ANDROID_HOME/platforms/ 2>/dev/null
+          echo "Build tools:" && ls $ANDROID_HOME/build-tools/ 2>/dev/null
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
